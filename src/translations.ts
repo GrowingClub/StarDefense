@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    title: "MR Nova Defense",
+    title: "Star Defense",
     start: "Start Game",
     score: "Score",
     ammo: "Ammo",
@@ -14,7 +14,7 @@ export const translations = {
     lang: "中文"
   },
   zh: {
-    title: "MR 新星防御",
+    title: "星星防御",
     start: "开始游戏",
     score: "得分",
     ammo: "弹药",
