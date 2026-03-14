@@ -35,7 +35,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     score: 0,
     level: 1,
     lastRocketSpawn: 0,
-    spawnInterval: 2000,
+    spawnInterval: 1200,
   });
 
   const initGame = useCallback(() => {
@@ -75,7 +75,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       score: 0,
       level: 1,
       lastRocketSpawn: 0,
-      spawnInterval: 2000,
+      spawnInterval: 1200,
     };
     
     onAmmoUpdate(batteries);
@@ -108,13 +108,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
           y: 0,
           targetX: target.x,
           targetY: target.y,
-          speed: 0.0005 + (level * 0.0001),
+          speed: 0.0003 + (level * 0.00005),
           progress: 0
         });
         
         stateRef.current.lastRocketSpawn = time;
         // Gradually speed up spawning
-        stateRef.current.spawnInterval = Math.max(500, 2000 - (stateRef.current.score / 100) * 100);
+        stateRef.current.spawnInterval = Math.max(300, 1200 - (stateRef.current.score / 100) * 100);
       }
     }
   };
