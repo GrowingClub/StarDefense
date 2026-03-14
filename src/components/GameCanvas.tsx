@@ -14,13 +14,15 @@ interface GameCanvasProps {
   onScoreUpdate: (points: number) => void;
   onGameOver: (won: boolean) => void;
   onAmmoUpdate: (batteries: Battery[]) => void;
+  reviveTrigger?: number;
 }
 
 const GameCanvas: React.FC<GameCanvasProps> = ({ 
   gameState, 
   onScoreUpdate, 
   onGameOver,
-  onAmmoUpdate
+  onAmmoUpdate,
+  reviveTrigger
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(null);
@@ -35,7 +37,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     score: 0,
     level: 1,
     lastRocketSpawn: 0,
-    spawnInterval: 1200,
+    spawnInterval: 3000,
   });
 
   const initGame = useCallback(() => {
@@ -75,7 +77,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       score: 0,
       level: 1,
       lastRocketSpawn: 0,
-      spawnInterval: 1200,
+      spawnInterval: 3000,
     };
     
     onAmmoUpdate(batteries);
@@ -86,6 +88,18 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       initGame();
     }
   }, [gameState, initGame]);
+
+  useEffect(() => {
+    if (reviveTrigger && reviveTrigger > 0) {
+      const { cities, batteries } = stateRef.current;
+      cities.forEach(c => c.active = true);
+      batteries.forEach(b => {
+        b.active = true;
+        b.ammo = b.maxAmmo;
+      });
+      onAmmoUpdate([...batteries]);
+    }
+  }, [reviveTrigger, onAmmoUpdate]);
 
   const spawnRocket = (time: number) => {
     const { rockets, cities, batteries, level, spawnInterval } = stateRef.current;
@@ -108,13 +122,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
           y: 0,
           targetX: target.x,
           targetY: target.y,
-          speed: 0.0003 + (level * 0.00005),
+          speed: 0.00015 + (level * 0.00003),
           progress: 0
         });
         
         stateRef.current.lastRocketSpawn = time;
         // Gradually speed up spawning
-        stateRef.current.spawnInterval = Math.max(300, 1200 - (stateRef.current.score / 100) * 100);
+        stateRef.current.spawnInterval = Math.max(800, 3000 - (stateRef.current.score / 100) * 200);
       }
     }
   };

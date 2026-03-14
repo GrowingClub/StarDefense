@@ -10,6 +10,8 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [language, setLanguage] = useState<Language>('zh');
   const [batteries, setBatteries] = useState<Battery[]>([]);
+  const [reviveTrigger, setReviveTrigger] = useState(0);
+  const [isWatchingAd, setIsWatchingAd] = useState(false);
 
   const t = translations[language];
 
@@ -27,7 +29,18 @@ export default function App() {
 
   const startGame = () => {
     setScore(0);
+    setReviveTrigger(0);
     setGameState('PLAYING');
+  };
+
+  const handleRevive = () => {
+    setIsWatchingAd(true);
+    // Simulate ad watching for 3 seconds
+    setTimeout(() => {
+      setIsWatchingAd(false);
+      setReviveTrigger(prev => prev + 1);
+      setGameState('PLAYING');
+    }, 3000);
   };
 
   const toggleLanguage = () => {
@@ -42,6 +55,7 @@ export default function App() {
         onScoreUpdate={handleScoreUpdate}
         onGameOver={handleGameOver}
         onAmmoUpdate={handleAmmoUpdate}
+        reviveTrigger={reviveTrigger}
       />
 
       {/* HUD Overlay */}
@@ -81,7 +95,7 @@ export default function App() {
 
       {/* Screens */}
       <AnimatePresence>
-        {gameState !== 'PLAYING' && (
+        {(gameState !== 'PLAYING' || isWatchingAd) && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -93,45 +107,63 @@ export default function App() {
               animate={{ scale: 1, y: 0 }}
               className="max-w-md w-full bg-zinc-900 border border-white/10 p-8 rounded-3xl shadow-2xl text-center"
             >
-              <div className="mb-6 flex justify-center">
-                <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
-                  {gameState === 'START' ? <Shield className="text-emerald-400 w-8 h-8" /> : 
-                   gameState === 'WON' ? <Zap className="text-yellow-400 w-8 h-8" /> : 
-                   <Target className="text-red-400 w-8 h-8" />}
+              {isWatchingAd ? (
+                <div className="py-12">
+                  <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+                  <h2 className="text-2xl font-bold">{t.watchingAd}</h2>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div className="mb-6 flex justify-center">
+                    <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/20">
+                      {gameState === 'START' ? <Shield className="text-emerald-400 w-8 h-8" /> : 
+                       gameState === 'WON' ? <Zap className="text-yellow-400 w-8 h-8" /> : 
+                       <Target className="text-red-400 w-8 h-8" />}
+                    </div>
+                  </div>
 
-              <h1 className="text-4xl font-bold tracking-tight mb-2">
-                {gameState === 'START' ? t.title : gameState === 'WON' ? t.victory : t.gameOver}
-              </h1>
-              
-              <p className="text-zinc-400 mb-8 leading-relaxed">
-                {gameState === 'START' ? t.instructions : gameState === 'WON' ? t.winMsg : t.lossMsg}
-              </p>
+                  <h1 className="text-4xl font-bold tracking-tight mb-2">
+                    {gameState === 'START' ? t.title : gameState === 'WON' ? t.victory : t.gameOver}
+                  </h1>
+                  
+                  <p className="text-zinc-400 mb-8 leading-relaxed">
+                    {gameState === 'START' ? t.instructions : gameState === 'WON' ? t.winMsg : t.lossMsg}
+                  </p>
 
-              {gameState !== 'START' && (
-                <div className="mb-8 p-4 bg-black/40 rounded-2xl border border-white/5">
-                  <span className="text-xs uppercase tracking-widest text-zinc-500 block mb-1">{t.score}</span>
-                  <span className="text-4xl font-bold font-mono text-emerald-400">{score}</span>
-                </div>
+                  {gameState !== 'START' && (
+                    <div className="mb-8 p-4 bg-black/40 rounded-2xl border border-white/5">
+                      <span className="text-xs uppercase tracking-widest text-zinc-500 block mb-1">{t.score}</span>
+                      <span className="text-4xl font-bold font-mono text-emerald-400">{score}</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3">
+                    <button 
+                      onClick={startGame}
+                      className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                    >
+                      {gameState === 'START' ? t.start : t.playAgain}
+                    </button>
+
+                    {gameState === 'LOST' && (
+                      <button 
+                        onClick={handleRevive}
+                        className="w-full py-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-2xl transition-all active:scale-95 border border-white/5"
+                      >
+                        {t.revive}
+                      </button>
+                    )}
+                    
+                    <button 
+                      onClick={toggleLanguage}
+                      className="flex items-center justify-center gap-2 py-3 text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <Languages size={18} />
+                      <span>{t.lang}</span>
+                    </button>
+                  </div>
+                </>
               )}
-
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={startGame}
-                  className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-2xl transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
-                >
-                  {gameState === 'START' ? t.start : t.playAgain}
-                </button>
-                
-                <button 
-                  onClick={toggleLanguage}
-                  className="flex items-center justify-center gap-2 py-3 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <Languages size={18} />
-                  <span>{t.lang}</span>
-                </button>
-              </div>
             </motion.div>
           </motion.div>
         )}
