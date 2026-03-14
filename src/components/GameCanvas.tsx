@@ -11,20 +11,22 @@ import {
 
 interface GameCanvasProps {
   gameState: GameState;
+  level: number;
   onScoreUpdate: (points: number) => void;
   onGameOver: (won: boolean) => void;
   onAmmoUpdate: (batteries: Battery[]) => void;
-  reviveTrigger?: number;
-  gameSpeed: number;
+  onLevelUp: (level: number) => void;
+  onLevelComplete: () => void;
 }
 
 const GameCanvas: React.FC<GameCanvasProps> = ({ 
   gameState, 
+  level,
   onScoreUpdate, 
   onGameOver,
   onAmmoUpdate,
-  reviveTrigger,
-  gameSpeed
+  onLevelUp,
+  onLevelComplete
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(null);
@@ -39,22 +41,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     score: 0,
     level: 1,
     lastRocketSpawn: 0,
-    spawnInterval: 3000,
+    spawnInterval: 1200,
   });
 
-  const initGame = useCallback(() => {
+  const initGame = useCallback((isNewLevel = false) => {
     const width = window.innerWidth;
     const height = window.innerHeight;
     
     const cities: City[] = [];
-    const citySpacing = width / 10;
     for (let i = 0; i < 6; i++) {
-      // Place cities between batteries
-      let x = 0;
-      if (i < 3) x = (i + 1) * (width / 4) / 4 + width / 8;
-      else x = (i - 2) * (width / 4) / 4 + width * 5/8;
-      
-      // Better distribution
       const positions = [0.15, 0.25, 0.35, 0.65, 0.75, 0.85];
       cities.push({
         id: `city-${i}`,
@@ -64,10 +59,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       });
     }
 
+    const currentLevel = isNewLevel ? level + 1 : level;
+
     const batteries: Battery[] = [
-      { id: 'bat-0', x: 40, y: height - 40, active: true, ammo: 20, maxAmmo: 20 },
-      { id: 'bat-1', x: width / 2, y: height - 40, active: true, ammo: 40, maxAmmo: 40 },
-      { id: 'bat-2', x: width - 40, y: height - 40, active: true, ammo: 20, maxAmmo: 20 },
+      { id: 'bat-0', x: 40, y: height - 40, active: true, ammo: 40 + (currentLevel - 1) * 5, maxAmmo: 40 + (currentLevel - 1) * 5 },
+      { id: 'bat-1', x: width / 2, y: height - 40, active: true, ammo: 80 + (currentLevel - 1) * 10, maxAmmo: 80 + (currentLevel - 1) * 10 },
+      { id: 'bat-2', x: width - 40, y: height - 40, active: true, ammo: 40 + (currentLevel - 1) * 5, maxAmmo: 40 + (currentLevel - 1) * 5 },
     ];
 
     stateRef.current = {
@@ -77,31 +74,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       cities,
       batteries,
       score: 0,
-      level: 1,
+      level: currentLevel,
       lastRocketSpawn: 0,
-      spawnInterval: 3000,
+      spawnInterval: Math.max(500, 1800 - (currentLevel - 1) * 150), // Increased base interval and reduction
     };
     
     onAmmoUpdate(batteries);
-  }, [onAmmoUpdate]);
+    if (isNewLevel) {
+      onLevelUp(currentLevel);
+    }
+  }, [onAmmoUpdate, onLevelUp, level]);
 
   useEffect(() => {
     if (gameState === 'PLAYING') {
-      initGame();
+      // If we just came from LEVEL_UP, we don't want to reset everything to level 1
+      // But App's 'level' state is already updated or will be updated.
+      // Actually, if gameState transitions to PLAYING, we should init the board.
+      // If level is 1 and score is 0, it's a fresh game.
+      // If level > 1, it's a continuation.
+      initGame(false); 
     }
-  }, [gameState, initGame]);
-
-  useEffect(() => {
-    if (reviveTrigger && reviveTrigger > 0) {
-      const { cities, batteries } = stateRef.current;
-      cities.forEach(c => c.active = true);
-      batteries.forEach(b => {
-        b.active = true;
-        b.ammo = b.maxAmmo;
-      });
-      onAmmoUpdate([...batteries]);
-    }
-  }, [reviveTrigger, onAmmoUpdate]);
+  }, [gameState === 'PLAYING']); // Only trigger when entering PLAYING state
 
   const spawnRocket = (time: number) => {
     const { rockets, cities, batteries, level, spawnInterval } = stateRef.current;
@@ -116,21 +109,38 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
       if (activeTargets.length > 0) {
         const target = activeTargets[Math.floor(Math.random() * activeTargets.length)];
-        const startX = Math.random() * width;
+        
+        let startX, startY;
+        const edge = Math.random();
+        if (edge < 0.5) {
+          // Top edge (50% chance)
+          startX = Math.random() * width;
+          startY = 0;
+        } else if (edge < 0.75) {
+          // Left edge (25% chance)
+          startX = 0;
+          startY = Math.random() * (height * 0.5);
+        } else {
+          // Right edge (25% chance)
+          startX = width;
+          startY = Math.random() * (height * 0.5);
+        }
         
         rockets.push({
           id: `rocket-${Date.now()}-${Math.random()}`,
+          startX,
+          startY,
           x: startX,
-          y: 0,
+          y: startY,
           targetX: target.x,
           targetY: target.y,
-          speed: 0.00015 + (level * 0.00003),
+          speed: 0.00015 + (level * 0.00003), // Reduced speed
           progress: 0
         });
         
         stateRef.current.lastRocketSpawn = time;
-        // Gradually speed up spawning
-        stateRef.current.spawnInterval = Math.max(800, 3000 - (stateRef.current.score / 100) * 200);
+        // Gradually speed up spawning - slower reduction
+        stateRef.current.spawnInterval = Math.max(500, 1800 - (stateRef.current.score / 100) * 80);
       }
     }
   };
@@ -147,17 +157,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     // Update Rockets
     for (let i = rockets.length - 1; i >= 0; i--) {
       const r = rockets[i];
-      const moveStep = r.speed * 16 * gameSpeed;
-      r.progress += moveStep;
-      r.x = r.x + (r.targetX - r.x) * (moveStep / (1 - r.progress + 0.001));
-      r.y = r.y + (r.targetY - r.y) * (moveStep / (1 - r.progress + 0.001));
+      r.progress += r.speed * 16; // Approx 60fps
       
-      // Recalculate x,y based on progress for linear movement
-      // Actually simpler:
-      // r.x = startX + (targetX - startX) * progress
-      // But we didn't store startX. Let's fix that or use simple lerp.
-      // Let's use a simpler lerp with stored startX in the future, 
-      // for now let's just move them down.
+      // Linear interpolation for smooth movement from start to target
+      r.x = r.startX + (r.targetX - r.startX) * r.progress;
+      r.y = r.startY + (r.targetY - r.startY) * r.progress;
       
       if (r.progress >= 1 || r.y >= r.targetY) {
         // Hit target
@@ -190,7 +194,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     // Update Missiles
     for (let i = missiles.length - 1; i >= 0; i--) {
       const m = missiles[i];
-      m.progress += m.speed * 16 * gameSpeed;
+      m.progress += m.speed * 16;
       
       const dx = m.targetX - m.startX;
       const dy = m.targetY - m.startY;
@@ -204,7 +208,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
           x: m.targetX,
           y: m.targetY,
           radius: 0,
-          maxRadius: 50,
+          maxRadius: 70, // Increased from 50
           expanding: true,
           life: 1
         });
@@ -216,28 +220,54 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     for (let i = explosions.length - 1; i >= 0; i--) {
       const e = explosions[i];
       if (e.expanding) {
-        e.radius += 2 * gameSpeed;
+        e.radius += 2;
         if (e.radius >= e.maxRadius) e.expanding = false;
       } else {
-        e.radius -= 0.5 * gameSpeed;
-        e.life -= 0.02 * gameSpeed;
+        e.radius -= 0.5;
+        e.life -= 0.02;
       }
 
       if (e.radius <= 0 || e.life <= 0) {
         explosions.splice(i, 1);
       } else {
-        // Check collision with rockets
+        // Check collision with rockets (including their trajectory)
         for (let j = rockets.length - 1; j >= 0; j--) {
           const r = rockets[j];
-          const dist = Math.sqrt((r.x - e.x) ** 2 + (r.y - e.y) ** 2);
+          
+          // Calculate distance from explosion center to rocket trajectory segment
+          const A = { x: r.startX, y: r.startY };
+          const B = { x: r.x, y: r.y };
+          const P = { x: e.x, y: e.y };
+          
+          const v = { x: B.x - A.x, y: B.y - A.y };
+          const w = { x: P.x - A.x, y: P.y - A.y };
+          
+          const dot = w.x * v.x + w.y * v.y;
+          const vSq = v.x * v.x + v.y * v.y;
+          let t = vSq === 0 ? -1 : dot / vSq;
+          
+          let dist;
+          if (t < 0) {
+            dist = Math.sqrt((P.x - A.x) ** 2 + (P.y - A.y) ** 2);
+          } else if (t > 1) {
+            dist = Math.sqrt((P.x - B.x) ** 2 + (P.y - B.y) ** 2);
+          } else {
+            const proj = { x: A.x + t * v.x, y: A.y + t * v.y };
+            dist = Math.sqrt((P.x - proj.x) ** 2 + (P.y - proj.y) ** 2);
+          }
+
           if (dist < e.radius) {
             rockets.splice(j, 1);
             stateRef.current.score += 20;
             onScoreUpdate(20);
             
-            // Win condition
-            if (stateRef.current.score >= 1000) {
-              onGameOver(true);
+            // Level up condition
+            if (stateRef.current.score >= stateRef.current.level * 200) {
+              onLevelComplete();
+              // We need to increment level in App so that when we return to PLAYING,
+              // initGame uses the correct level.
+              onLevelUp(stateRef.current.level + 1);
+              return; 
             }
           }
         }
@@ -250,7 +280,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
 
-    ctx.clearRect(0, 0, width, height);
+    // Draw Background (Gradient Sky)
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, '#0f172a'); // Deep navy at top
+    gradient.addColorStop(0.7, '#1e1b4b'); // Indigo middle
+    gradient.addColorStop(1, '#312e81'); // Slightly lighter at horizon
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
 
     // Draw Ground
     ctx.fillStyle = '#1a1a1a';
@@ -295,21 +331,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // Draw Rockets
     ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 2; // Bolder trail
     rockets.forEach(r => {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
       ctx.beginPath();
-      // We don't have startX, so we just draw a trail from top
-      // For better visual, we could store startX
       ctx.moveTo(r.x, r.y);
-      ctx.lineTo(r.x, 0); // Simple vertical trail for now
+      ctx.lineTo(r.startX, r.startY);
       ctx.stroke();
 
       ctx.fillStyle = '#f87171';
       ctx.beginPath();
-      ctx.arc(r.x, r.y, 3, 0, Math.PI * 2);
+      ctx.arc(r.x, r.y, 4, 0, Math.PI * 2); // Slightly larger/bolder head
       ctx.fill();
+      
+      // Add a small glow to the rocket head
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#f87171';
+      ctx.stroke();
+      ctx.shadowBlur = 0;
     });
     ctx.setLineDash([]);
+    ctx.lineWidth = 1; // Reset
 
     // Draw Missiles
     missiles.forEach(m => {
@@ -363,11 +405,6 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
     if (gameState !== 'PLAYING') return;
-    
-    // Prevent default for touch to avoid scrolling/zoom
-    if ('touches' in e && e.cancelable) {
-      e.preventDefault();
-    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;

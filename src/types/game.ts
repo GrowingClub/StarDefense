@@ -7,6 +7,8 @@ export interface GameObject {
 }
 
 export interface EnemyRocket extends GameObject {
+  startX: number;
+  startY: number;
   targetX: number;
   targetY: number;
   speed: number;
@@ -40,6 +42,6 @@ export interface Battery extends GameObject {
   maxAmmo: number;
 }
 
-export type GameState = 'START' | 'PLAYING' | 'WON' | 'LOST';
+export type GameState = 'START' | 'PLAYING' | 'WON' | 'LOST' | 'LEVEL_UP';
 
 export type Language = 'en' | 'zh';

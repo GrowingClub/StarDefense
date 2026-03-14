@@ -9,11 +9,13 @@ export const translations = {
     playAgain: "Play Again",
     winMsg: "You successfully defended the cities!",
     lossMsg: "All batteries destroyed. The cities have fallen.",
-    revive: "Revive (Watch Ad)",
-    watchingAd: "Watching Ad...",
-    gameSpeed: "Game Speed",
     instructions: "Click anywhere to intercept incoming rockets. Protect your cities and batteries.",
-    targetScore: "Target: 1000",
+    targetScore: "Goal: 800",
+    level: "Level",
+    levelUp: "Level Complete!",
+    nextLevel: "Next Level",
+    levelSuccess: "Great job! You've cleared this level.",
+    totalScore: "Total Score",
     lang: "中文"
   },
   zh: {
@@ -26,11 +28,13 @@ export const translations = {
     playAgain: "再玩一次",
     winMsg: "你成功保卫了城市！",
     lossMsg: "所有炮台已被摧毁。城市沦陷了。",
-    revive: "看广告复活",
-    watchingAd: "广告播放中...",
-    gameSpeed: "游戏速度",
     instructions: "点击屏幕任何位置拦截落下的火箭。保护你的城市和炮台。",
-    targetScore: "目标：1000",
+    targetScore: "目标",
+    level: "关卡",
+    levelUp: "闯关成功！",
+    nextLevel: "进入下一关",
+    levelSuccess: "太棒了！你已成功通过本关。",
+    totalScore: "总分",
     lang: "English"
   }
 };
