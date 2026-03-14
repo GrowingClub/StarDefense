@@ -15,6 +15,7 @@ interface GameCanvasProps {
   onGameOver: (won: boolean) => void;
   onAmmoUpdate: (batteries: Battery[]) => void;
   reviveTrigger?: number;
+  gameSpeed: number;
 }
 
 const GameCanvas: React.FC<GameCanvasProps> = ({ 
@@ -22,7 +23,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   onScoreUpdate, 
   onGameOver,
   onAmmoUpdate,
-  reviveTrigger
+  reviveTrigger,
+  gameSpeed
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(null);
@@ -145,9 +147,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     // Update Rockets
     for (let i = rockets.length - 1; i >= 0; i--) {
       const r = rockets[i];
-      r.progress += r.speed * 16; // Approx 60fps
-      r.x = r.x + (r.targetX - r.x) * (r.speed * 16 / (1 - r.progress + 0.001));
-      r.y = r.y + (r.targetY - r.y) * (r.speed * 16 / (1 - r.progress + 0.001));
+      const moveStep = r.speed * 16 * gameSpeed;
+      r.progress += moveStep;
+      r.x = r.x + (r.targetX - r.x) * (moveStep / (1 - r.progress + 0.001));
+      r.y = r.y + (r.targetY - r.y) * (moveStep / (1 - r.progress + 0.001));
       
       // Recalculate x,y based on progress for linear movement
       // Actually simpler:
@@ -187,7 +190,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     // Update Missiles
     for (let i = missiles.length - 1; i >= 0; i--) {
       const m = missiles[i];
-      m.progress += m.speed * 16;
+      m.progress += m.speed * 16 * gameSpeed;
       
       const dx = m.targetX - m.startX;
       const dy = m.targetY - m.startY;
@@ -213,11 +216,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     for (let i = explosions.length - 1; i >= 0; i--) {
       const e = explosions[i];
       if (e.expanding) {
-        e.radius += 2;
+        e.radius += 2 * gameSpeed;
         if (e.radius >= e.maxRadius) e.expanding = false;
       } else {
-        e.radius -= 0.5;
-        e.life -= 0.02;
+        e.radius -= 0.5 * gameSpeed;
+        e.life -= 0.02 * gameSpeed;
       }
 
       if (e.radius <= 0 || e.life <= 0) {
@@ -360,6 +363,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
   const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
     if (gameState !== 'PLAYING') return;
+    
+    // Prevent default for touch to avoid scrolling/zoom
+    if ('touches' in e && e.cancelable) {
+      e.preventDefault();
+    }
 
     const canvas = canvasRef.current;
     if (!canvas) return;

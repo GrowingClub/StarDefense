@@ -11,6 +11,7 @@ export const translations = {
     lossMsg: "All batteries destroyed. The cities have fallen.",
     revive: "Revive (Watch Ad)",
     watchingAd: "Watching Ad...",
+    gameSpeed: "Game Speed",
     instructions: "Click anywhere to intercept incoming rockets. Protect your cities and batteries.",
     targetScore: "Target: 1000",
     lang: "中文"
@@ -27,6 +28,7 @@ export const translations = {
     lossMsg: "所有炮台已被摧毁。城市沦陷了。",
     revive: "看广告复活",
     watchingAd: "广告播放中...",
+    gameSpeed: "游戏速度",
     instructions: "点击屏幕任何位置拦截落下的火箭。保护你的城市和炮台。",
     targetScore: "目标：1000",
     lang: "English"

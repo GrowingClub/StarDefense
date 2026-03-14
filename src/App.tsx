@@ -12,6 +12,7 @@ export default function App() {
   const [batteries, setBatteries] = useState<Battery[]>([]);
   const [reviveTrigger, setReviveTrigger] = useState(0);
   const [isWatchingAd, setIsWatchingAd] = useState(false);
+  const [gameSpeed, setGameSpeed] = useState(1);
 
   const t = translations[language];
 
@@ -48,7 +49,7 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden font-sans text-white select-none">
+    <div className="relative w-full h-screen bg-black overflow-hidden font-sans text-white select-none touch-none">
       {/* Game Canvas */}
       <GameCanvas 
         gameState={gameState} 
@@ -56,6 +57,7 @@ export default function App() {
         onGameOver={handleGameOver}
         onAmmoUpdate={handleAmmoUpdate}
         reviveTrigger={reviveTrigger}
+        gameSpeed={gameSpeed}
       />
 
       {/* HUD Overlay */}
@@ -88,6 +90,24 @@ export default function App() {
                   {bat.ammo}
                 </span>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Speed Control (Floating when playing) */}
+      {gameState === 'PLAYING' && (
+        <div className="absolute bottom-4 left-4 flex flex-col gap-2 pointer-events-auto">
+          <span className="text-[10px] uppercase tracking-widest text-white/40 font-mono">{t.gameSpeed}</span>
+          <div className="flex gap-1 bg-black/40 backdrop-blur-md border border-white/10 p-1 rounded-xl">
+            {[0.5, 1, 1.5, 2].map(speed => (
+              <button
+                key={speed}
+                onClick={() => setGameSpeed(speed)}
+                className={`px-3 py-1 rounded-lg text-xs font-mono transition-all ${gameSpeed === speed ? 'bg-emerald-500 text-black font-bold' : 'text-white/60 hover:text-white'}`}
+              >
+                {speed}x
+              </button>
             ))}
           </div>
         </div>
